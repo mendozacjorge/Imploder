@@ -5,6 +5,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
+import java.nio.file.DirectoryStream;
 import java.nio.file.FileVisitResult;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -46,7 +47,7 @@ public class Operations {
 			throw ex;
 		}
 		
-		if (deleteSource) delete(originFile);
+		if (deleteSource) deleteFileOrFolder(originFile);
 		
 	}
 	
@@ -77,7 +78,7 @@ public class Operations {
 			cFolder.setFiles(files);
 			os.writeObject(cFolder);
 			
-			if (deleteSource) delete(folder);
+			if (deleteSource) deleteFileOrFolder(folder);
 			
 		} catch (Exception ex) {
 			throw ex;
@@ -92,29 +93,24 @@ public class Operations {
 		Logger.getLogger(Operations.class.getName()).log(Level.SEVERE, msg, ex);
 	}
 	
-	private static void delete(Path file) {
-		if (Files.isDirectory(file)) {
-			try {
-				Files.walkFileTree(file, new SimpleFileVisitor<Path>() {
-					
-					@Override
-					public FileVisitResult visitFile(Path innerFile, BasicFileAttributes attrs) 
-							throws IOException {
-						delete(innerFile);
-						return FileVisitResult.CONTINUE;
+	
+	/**
+	 * Deletes the resource recursively in a DFS manner.
+	 *
+	 * @param path
+	 * @throws IOException in case the delete operation fails
+	 */
+	public static void deleteFileOrFolder(Path path) throws IOException {
+		if (Files.exists(path)) {
+			if (Files.isDirectory(path)) {
+				try (DirectoryStream<Path> stream = Files.newDirectoryStream(path)) {
+					for (Path entry : stream) {
+						deleteFileOrFolder(entry);
 					}
-					
-				});
-			} catch (Exception ex) {
-				log("error borrando: " + ex.getMessage());
+				}
 			}
-		} 
-		try {
-			Files.deleteIfExists(file);
-		} catch (Exception ex) {
-			log("error borrando: " + ex.getMessage());
+			Files.deleteIfExists(path);
 		}
-		
 	}
 	
 }
